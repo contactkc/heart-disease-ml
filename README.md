@@ -17,6 +17,58 @@
 - number of major vessels colored by flouroscopy
 - thal: 0 = normal; 1 = fixed defect; 2 = reversable defect
 
+## Code
+we will be using [johnsmith88's heart disease dataset](https://www.kaggle.com/datasets/johnsmith88/heart-disease-dataset) which we downloaded locally into our directory
+```python
+data = pd.read_csv('heart.csv')
+```
+
+we then binarize targets to check for potential multi-class targets (0-4 in some heart disease datasets), and if present binarizes the target (0 = no, 1 = yes) to match our binary classification goal
+```python
+if data['target'].max() > 1:
+    data['target'] = data['target'].apply(lambda x: 0 if x == 0 else 1)
+```
+
+we define the features and targets to focus on relevant predictors of heart disease based on medical significance
+```python
+features = ['age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'restecg', 'thalach',
+            'exang', 'oldpeak', 'slope', 'ca', 'thal']
+X = data[features]
+y = data['target']
+```
+
+we do preprocessing on the data with one-hot encoding which converts categorical variables (cp, restecg, slope, thal) into binary columns (e.g., cp_1, cp_2) because machine learning models require numerical input
+and standardization to normalize numerical features to prevent features with larger ranges (e.g., chol) from dominating the model, ensuring fair contribution from all predictors
+```python
+categorical_cols = ['cp', 'restecg', 'slope', 'thal']
+X = pd.get_dummies(X, columns=categorical_cols, drop_first=True)
+
+scaler = StandardScaler()
+numerical_cols = ['age', 'trestbps', 'chol', 'thalach', 'oldpeak', 'ca']
+X[numerical_cols] = scaler.fit_transform(X[numerical_cols])
+```
+
+we then train the models with LogicalRegression and RandomForestClassifier which are fitted to the data to learn patterns with a 80/20 split to balance training depth and test evaluation
+```python
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+log_reg = LogisticRegression(random_state=42)
+rf_clf = RandomForestClassifier(random_state=42)
+log_reg.fit(X_train, y_train)
+rf_clf.fit(X_train, y_train)
+```
+
+finally we evaluate the results for a detailed breakdown of performance per class and roc_auc_score to measure the models’ ability to distinguish between classes, providing a comprehensive assessment of predictive power
+```python
+print("\nlogistic regression:")
+print(classification_report(y_test, log_reg.predict(X_test)))
+print("ROC-AUC:", roc_auc_score(y_test, log_reg.predict_proba(X_test)[:, 1]))
+print("\nrandom forest:")
+print(classification_report(y_test, rf_clf.predict(X_test)))
+print("ROC-AUC:", roc_auc_score(y_test, rf_clf.predict_proba(X_test)[:, 1]))
+```
+
+
 ## Analysis
 - the dataset provides us with 499 instances of no heart disease, and 526 instances with heart disease found
 - we use the dataset with classification models to identify patterns with the given features that correlate with heart disease diagnosis, using supervised machine learning techniques
